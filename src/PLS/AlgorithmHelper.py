@@ -3,6 +3,7 @@ import random
 
 import numpy as np
 
+from PLS.QuadTree import QuadTree
 
 
 # Helper functions #
@@ -132,7 +133,7 @@ class Neighborhood:
 class Update:
 
 	@staticmethod
-	def updateFront(front, solution):
+	def updateFrontList(front, solution):
 
 		toRemoveIndex = []
 		for i, (sol, objectives) in enumerate(front):
@@ -143,6 +144,9 @@ class Update:
 
 			#i is better or equal than solution
 			elif all(objectives >= solution[1]):
+
+				#print( objectives, "Beaten by", solution[1] )
+
 				return False
 
 		for i in sorted(toRemoveIndex, reverse=True):
@@ -152,4 +156,6 @@ class Update:
 
 		return True
 
+	def updateFrontQuad(front, solution):
+		return front.insert( solution[1], solution[0] )
 

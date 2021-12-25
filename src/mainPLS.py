@@ -18,11 +18,15 @@ objectsWeights, objectsValues, W = readInstance(path+".dat")
 #optFront = notDominated(path+'.eff')
 
 
+#Quad-Tree version
+solver = PLS(objectsWeights, objectsValues, W, Population.randomOnePopulation, Neighborhood.exchangeOneAndFillNeighborhood, Update.updateFrontQuad)
 
-solver = PLS(objectsWeights, objectsValues, W, Population.randomOnePopulation, Neighborhood.exchangeOneAndFillNeighborhood, Update.updateFront)
+#List version
+#solver = PLS(objectsWeights, objectsValues, W, Population.randomOnePopulation, Neighborhood.exchangeOneAndFillNeighborhood, Update.updateFrontList)
 
 
 eff, elapsedTime = solver.run(verbose=1)
+#eff, elapsedTime = solver.runList(verbose=1)
 
 front = convertPopulationToFront(eff)
 
