@@ -84,6 +84,7 @@ class Test:
 		#We reduce data size
 		objectsWeights, objectsValues, W = reduceFront(objectsWeights, objectsValues, W, factor=0.055)
 
+		print(f"PLS exécuté sur {objectsValues.shape[0]} objets.")
 
 		solver = PLS(objectsWeights, objectsValues, W, Population.randomOnePopulation, Neighborhood.exchangeOneAndFillNeighborhood, Update.updateFrontList)
 
