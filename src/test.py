@@ -5,7 +5,7 @@ from PLS.PLS import PLS
 from PLS.AlgorithmHelper import Update, Population, Neighborhood
 from PLS.AlgorithmHelper import convertPopulationToFront, reduceFront
 
-from decision import incrementalElicitation
+from decision import incrementalElicitation, simulatedRandomIncrementalElicitation
 
 
 from helper import evaluate, feasible
@@ -72,9 +72,28 @@ class Test:
 		front = convertPopulationToFront(eff, eff[0][1].shape[0])
 
 
-		finalBestSolution = incrementalElicitation(front)
+		finalBestSolution, questionCount = incrementalElicitation(front)
 
 		print(f"Best solution is n°{finalBestSolution}: {front[finalBestSolution]}")
 
 
+	def simulatedRandomIncrementalElicitation():
 
+		objectsWeights, objectsValues, W = readInstance(Test.path+".dat")
+
+		#We reduce data size
+		objectsWeights, objectsValues, W = reduceFront(objectsWeights, objectsValues, W, factor=0.055)
+
+
+		solver = PLS(objectsWeights, objectsValues, W, Population.randomOnePopulation, Neighborhood.exchangeOneAndFillNeighborhood, Update.updateFrontList)
+
+		eff, elapsedTime = solver.runList(verbose=0)
+
+		front = convertPopulationToFront(eff, eff[0][1].shape[0])
+
+
+		finalBestSolution, questionCount, unknownWeights = simulatedRandomIncrementalElicitation(front, verbose=1)
+
+		print(f"Best solution is n°{finalBestSolution}: {front[finalBestSolution]}")
+		print(f"Note: Weights used for decision are {unknownWeights}")
+		print(f"{questionCount} questions posées pour {front.shape[0]} solutions.")

@@ -3,8 +3,10 @@ import numpy as np
 
 from scipy import optimize
 
-from pulp import LpMaximize, LpProblem, LpStatus, lpSum, LpVariable
+from pulp import LpMaximize, LpProblem, lpSum, LpVariable
 from tqdm import tqdm
+
+from aggregation import OWA
 
 #Avec pulp
 def PMR_OWA(x, y, prefs):
@@ -230,21 +232,26 @@ def randomChoice(front, prefs):
 	return selected[0], selected[1]
 
 
-def incrementalElicitation(front):
+def incrementalElicitation(front, verbose=0):
 
 	prefs = []
 
 	oldSelected = None
 
+	questionCount = 0
+
 	while True:
 
 		x, y, value = CSS(front, prefs)
 
+		if verbose > 0:
+			print(f"Valeur du regret minimax: {value}")
+
 		if value == 0:
-			return x
+			return x, questionCount
 
 		elif x == -1 or y == -1:
-			return oldSelected
+			return oldSelected, questionCount
 
 		solutions = [front[x], front[y]]
 
@@ -263,6 +270,9 @@ def incrementalElicitation(front):
 			print(selected, "is not 0 or 1.")
 
 		else:
+
+			questionCount += 1
+
 			oldSelected = x * (1 - selected) + y * selected
 
 			notSelected = 1 - selected
@@ -293,4 +303,53 @@ Select 0 or 1: 0
 8: [3571 3813 3840 4101 4471 4524]
 
 """
+
+def simulatedRandomIncrementalElicitation(front, verbose=0):
+
+	unknownWeights = np.random.random(front.shape[1])
+	unknownWeights = unknownWeights/unknownWeights.sum()
+
+	return simulatedIncrementalElicitation(front, unknownWeights, verbose)
+
+
+def simulatedIncrementalElicitation(front, unknownWeights, verbose=0):
+
+	prefs = []
+
+	oldSelected = None
+
+	questionCount = 0
+
+	while True:
+
+		x, y, value = CSS(front, prefs)
+
+		if verbose > 0:
+			print(f"Valeur du regret minimax: {value}")
+
+		if value == 0:
+			return x, questionCount, unknownWeights
+
+		elif x == -1 or y == -1:
+			return oldSelected, questionCount, unknownWeights
+
+		solutions = [front[x], front[y]]
+
+		print(f"0: {solutions[0]} (Solution n°{x})")
+		print(f"1: {solutions[1]} (Solution n°{y})")
+
+		selected = np.array([OWA(solutions[0], unknownWeights), OWA(solutions[1], unknownWeights)]).argmax()
+		
+		oldSelected = x * (1 - selected) + y * selected
+
+		print(f"{selected} selected (Solution n°{oldSelected}).")
+
+		questionCount += 1
+
+		notSelected = 1 - selected
+
+		#Tout les ensemble de poids tel que f(rez[selected]) > f(rez[notSelected])
+		prefs.append( (solutions[selected], solutions[notSelected]) )
+
+
 
