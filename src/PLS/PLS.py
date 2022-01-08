@@ -23,7 +23,7 @@ class PLS:
 		self.updateFunction = updateFunction
 
 
-	def run(self, verbose=0):
+	def runQuad(self, verbose=0):
 
 
 		startTime = time.time()
@@ -89,7 +89,6 @@ class PLS:
 				for voisin in self.neighborhoodGenerator(solution, self.objectsWeights, self.objectsValues, self.W):
 					#If voisin is not dominated by solution
 					if not all(solution[1] >= voisin[1]):
-					#if solution[1][0] < voisin[1][0] or solution[1][1] < voisin[1][1]:
 
 						if self.updateFunction(efficaces, voisin):
 							self.updateFunction(Pa, voisin)

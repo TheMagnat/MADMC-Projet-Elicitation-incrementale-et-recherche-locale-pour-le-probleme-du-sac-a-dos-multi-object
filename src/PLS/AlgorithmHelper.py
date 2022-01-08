@@ -43,15 +43,22 @@ def fillRandom(solution, currentSize, objectsWeights, objectsValues, W):
 """
 Convert a population to an array of size (n, 2) of points representing the pareto front
 """
-def convertPopulationToFront(population):
+def convertPopulationToFront(population, nbCriteria):
 
-	front = np.empty((len(population), 2), dtype=int)
+	front = np.empty((len(population), nbCriteria), dtype=int)
 
 	for i, elem in enumerate(population):
 		front[i] = elem[1]
 
 	return front
 
+
+def reduceFront(objectsWeights, objectsValues, W, factor=0.5):
+
+	newSize = int(objectsWeights.shape[0] * factor)
+
+	return objectsWeights[:newSize], objectsValues[:newSize], W * factor
+	
 
 class Population:
 
