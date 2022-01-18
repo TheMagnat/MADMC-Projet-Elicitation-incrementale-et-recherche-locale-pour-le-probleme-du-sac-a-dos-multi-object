@@ -53,11 +53,25 @@ def convertPopulationToFront(population, nbCriteria):
 	return front
 
 
-def reduceFront(objectsWeights, objectsValues, W, factor=0.5):
+def reduceObjects(objectsWeights, objectsValues, W, nbCriteria=None, factor=0.5, generateW=False):
+
+	if nbCriteria is None:
+		nbCriteria = objectsValues.shape[1]
 
 	newSize = int(objectsWeights.shape[0] * factor)
 
-	return objectsWeights[:newSize], objectsValues[:newSize], W * factor
+	rng = np.random.default_rng()
+	choices = rng.choice(objectsWeights.shape[0], size=newSize, replace=False)
+
+
+	newObjectsWeights = objectsWeights[choices]
+	newObjectsValues = objectsValues[choices, :nbCriteria]
+
+	newW = W * factor
+	if generateW:
+		newW = newObjectsWeights.sum()/2
+
+	return newObjectsWeights, newObjectsValues, newW
 	
 
 class Population:

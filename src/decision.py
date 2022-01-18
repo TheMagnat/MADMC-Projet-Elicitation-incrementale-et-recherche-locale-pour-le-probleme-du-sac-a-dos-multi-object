@@ -56,9 +56,6 @@ def PMR_OWA(x, y, prefs):
 
 	model.solve()
 
-	# print(f"status: {model.status}, {LpStatus[model.status]}")
-	# print(f"objective: {model.objective.value()}")
-
 	return model.objective.value(), model.status == 1
 
 
@@ -112,14 +109,6 @@ def PMR_OWA_Scipy(x, y, prefs):
 
 		A.append(const4)
 		b.append(0)
-
-
-	# print(c)
-	# print(A)
-	# print(b)
-
-	# print(A_eq)
-	# print(b_eq)
 
 
 	res = optimize.linprog(
@@ -196,7 +185,6 @@ def MMR(front, prefs):
 			minValue = yValue
 			minXindex = xIndex
 			minYindex = yIndex
-
 
 	return minXindex, minYindex, minValue
 
@@ -309,10 +297,13 @@ def simulatedRandomIncrementalElicitation(front, verbose=0):
 	unknownWeights = np.random.random(front.shape[1])
 	unknownWeights = unknownWeights/unknownWeights.sum()
 
-	return simulatedIncrementalElicitation(front, unknownWeights, verbose)
+	return *simulatedIncrementalElicitation(front, unknownWeights, verbose), unknownWeights
 
 
 def simulatedIncrementalElicitation(front, unknownWeights, verbose=0):
+
+	if front.shape[0] == 1:
+		return 0, 0
 
 	prefs = []
 
@@ -327,11 +318,11 @@ def simulatedIncrementalElicitation(front, unknownWeights, verbose=0):
 		if verbose > 0:
 			print(f"Valeur du regret minimax: {value}")
 
-		if value == 0:
-			return x, questionCount, unknownWeights
+		if value <= 0:
+			return x, questionCount
 
 		elif x == -1 or y == -1:
-			return oldSelected, questionCount, unknownWeights
+			return oldSelected, questionCount
 
 		solutions = [front[x], front[y]]
 

@@ -4,4 +4,5 @@ from test import Test
 #Test.generateInstances()
 #Test.PLS()
 #Test.incrementalElicitation()
-Test.simulatedRandomIncrementalElicitation()
+#Test.simulatedRandomIncrementalElicitation()
+Test.PLSwithElicitation()

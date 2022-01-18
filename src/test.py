@@ -3,9 +3,9 @@ from InstanceLoader import readInstance
 
 from PLS.PLS import PLS
 from PLS.AlgorithmHelper import Update, Population, Neighborhood
-from PLS.AlgorithmHelper import convertPopulationToFront, reduceFront
+from PLS.AlgorithmHelper import convertPopulationToFront, reduceObjects
 
-from decision import incrementalElicitation, simulatedRandomIncrementalElicitation
+from decision import incrementalElicitation, simulatedIncrementalElicitation, simulatedRandomIncrementalElicitation
 
 
 from helper import evaluate, feasible
@@ -43,7 +43,7 @@ class Test:
 		#optFront = notDominated(Test.path+'.eff')
 
 		#We reduce data size
-		objectsWeights, objectsValues, W = reduceFront(objectsWeights, objectsValues, W, factor=0.1)
+		objectsWeights, objectsValues, W = reduceObjects(objectsWeights, objectsValues, W, factor=0.1, generateW=True)
 
 		#Quad-Tree version
 		#solver = PLS(objectsWeights, objectsValues, W, Population.randomOnePopulation, Neighborhood.exchangeOneAndFillNeighborhood, Update.updateFrontQuad)
@@ -62,7 +62,7 @@ class Test:
 		objectsWeights, objectsValues, W = readInstance(Test.path+".dat")
 
 		#We reduce data size
-		objectsWeights, objectsValues, W = reduceFront(objectsWeights, objectsValues, W, factor=0.055)
+		objectsWeights, objectsValues, W = reduceObjects(objectsWeights, objectsValues, W, factor=0.055, generateW=True)
 
 
 		solver = PLS(objectsWeights, objectsValues, W, Population.randomOnePopulation, Neighborhood.exchangeOneAndFillNeighborhood, Update.updateFrontList)
@@ -82,7 +82,7 @@ class Test:
 		objectsWeights, objectsValues, W = readInstance(Test.path+".dat")
 
 		#We reduce data size
-		objectsWeights, objectsValues, W = reduceFront(objectsWeights, objectsValues, W, factor=0.055)
+		objectsWeights, objectsValues, W = reduceObjects(objectsWeights, objectsValues, W, nbCriteria=6, factor=0.055, generateW=True)
 
 		print(f"PLS exécuté sur {objectsValues.shape[0]} objets.")
 
@@ -98,3 +98,26 @@ class Test:
 		print(f"Best solution is n°{finalBestSolution}: {front[finalBestSolution]}")
 		print(f"Note: Weights used for decision are {unknownWeights}")
 		print(f"{questionCount} questions posées pour {front.shape[0]} solutions.")
+
+
+	def PLSwithElicitation():
+
+		objectsWeights, objectsValues, W = readInstance(Test.path+".dat")
+
+		#We reduce data size
+		objectsWeights, objectsValues, W = reduceObjects(objectsWeights, objectsValues, W, factor=0.1, generateW=True)
+
+		#List version
+		solver = PLS(objectsWeights, objectsValues, W, Population.randomOnePopulation, Neighborhood.exchangeOneAndFillNeighborhood, Update.updateFrontList)
+
+
+		unknownWeights = np.random.random(objectsValues.shape[1])
+		unknownWeights = unknownWeights/unknownWeights.sum()
+
+
+		selectedSolution, elapsedTime, questionCount = solver.runSelection(selector=simulatedIncrementalElicitation, selectorArgs=[unknownWeights], verbose=1)
+
+		print(f"Best solution is: {selectedSolution[1]}")
+		print(f"Object array: {selectedSolution[0]}")
+		print(f"Obtened with {questionCount} questions.")
+		print("Elapsed time:", round(elapsedTime, 3), "sec")

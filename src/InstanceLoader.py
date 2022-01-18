@@ -2,7 +2,7 @@
 import numpy as np
 
 
-def readInstance(path):
+def readInstance(path, generateW=False):
 
 	nPos = 1
 
@@ -18,6 +18,9 @@ def readInstance(path):
 		objects[i] = list( map(int, line.rstrip().lstrip("i ").split(" ")) )
 
 	W = int(allLines[-2].split(" ")[1])
+
+	if generateW:
+		W = objects[:, 0].sum()/2
 
 	return objects[:, 0], objects[:, 1:], W
 

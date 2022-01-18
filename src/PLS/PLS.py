@@ -1,6 +1,7 @@
 import time
 
 from PLS.QuadTree import QuadTree
+from PLS.AlgorithmHelper import convertPopulationToFront
 
 
 from copy import deepcopy
@@ -100,5 +101,52 @@ class PLS:
 			it += 1
 
 		return efficaces, time.time() - startTime
+
+	def runSelection(self, selector, selectorArgs=[], verbose=0):
+
+		startTime = time.time()
+
+
+		initialPopulation = self.populationGenerator(self.objectsWeights, self.objectsValues, self.W)
+
+		tempoFront = convertPopulationToFront(initialPopulation, self.nbCriteria)
+
+		currentSolutionIndex = selector(tempoFront, *selectorArgs)[0]
+		currentSolution = initialPopulation[currentSolutionIndex]
+
+		it = 0
+
+		totalSelectorIt = 0
+
+		while True:
+
+			if verbose == 1:
+				pass
+				#print(f"Taille de nouvelle population au temps {it}: {len(population)}")
+
+			currentPopulation = [currentSolution] + self.neighborhoodGenerator(currentSolution, self.objectsWeights, self.objectsValues, self.W)
+
+			tempoFront = convertPopulationToFront(currentPopulation, self.nbCriteria)
+
+			currentSolutionIndex, nbSelectorIt = selector(tempoFront, *selectorArgs)
+
+			totalSelectorIt += nbSelectorIt
+
+			if verbose == 1:
+				print(f"Selected solution n°{currentSolutionIndex}: {currentPopulation[currentSolutionIndex][1]}")
+
+			#If currentSolutionIndex equal 0, parent is selected
+			if currentSolutionIndex == 0:
+
+				if verbose == 1:
+					print(f"Solution séléctionné en {it} itérations.")
+
+				return currentSolution, time.time() - startTime, totalSelectorIt
+
+			currentSolution = currentPopulation[currentSolutionIndex]
+
+			it += 1
+
+		
 
 
