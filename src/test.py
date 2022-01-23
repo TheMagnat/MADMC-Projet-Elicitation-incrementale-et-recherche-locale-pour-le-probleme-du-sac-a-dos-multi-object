@@ -221,32 +221,28 @@ class Test:
 		print(round(secondValue, 2), round(trueValue/secondValue, 3))
 		print(round(trueValue, 2), statue)
 
-	def generateLogs(mode="OWA"):
+	def generateLogs(nbIterations, mode="OWA"):
 
-
-		nbIterations = 2
-
-		
 		objectsWeights, objectsValues, W = readInstance(Test.path+".dat")
 
-		n = 5
-
-
 		if mode == "WS":
-			name = 'logs/solveLogsWS.csv'
+			name = 'logs/solveLogsWS2.csv'
 			LP_Aggregator = LP_WS
 			aggregator = weightedSum
 		else:
-			name = 'logs/solveLogsOWA.csv'
+			name = 'logs/solveLogsOWA2.csv'
 			LP_Aggregator = LP_OWA
 			aggregator = OWA
 
 
 		csvFile = open(name, 'a+')
 
-
 		#Add this line if the file does not exist
 		#csvFile.write('PLS_Puis_EI(1),questions(1),temps(1),PLS_ET_EI(2),questions(2),temps(2),Optimale\n')
+
+
+		#Nb critères
+		n = 3
 
 		for i in range(nbIterations):
 
@@ -264,8 +260,11 @@ class Test:
 
 			front = convertPopulationToFront(eff, eff[0][1].shape[0])
 
+			#To save numbers of questions and score
+			saved = []
+
 			startTime = time.time()
-			finalBestSolution, questionCount1, prefs = simulatedIncrementalElicitation(front, unknownWeights, mode=mode, verbose=1)
+			finalBestSolution, questionCount1, prefs = simulatedIncrementalElicitation(front, unknownWeights, mode=mode, verbose=1, save=saved)
 			totalTime = time.time() - startTime
 
 			time1 = round(elapsedTime + totalTime, 3)
@@ -288,13 +287,31 @@ class Test:
 			csvFile.write(f'{round(firstValue, 2)},{questionCount1},{time1},{round(secondValue, 2)},{questionCount2},{time2},{round(trueValue, 2)}\n')
 
 
+			if mode == "WS":
+				name = f"logs/questionsLogsWS_{i+5}.csv"
+			else:
+				name = f"logs/questionsLogsOWA_{i+10}.csv"
+
+			with open(name, 'w+') as csvFileQuestions:
+				csvFileQuestions = open(name, 'w+')
+				csvFileQuestions.write('questions,PMR\n')
+
+				for save in saved:
+					csvFileQuestions.write(f'{save[0]},{save[1]}\n')
+
+
+
 		csvFile.close()
 
-	def loadLogs():
+	def loadLogs(mode="OWA"):
 
-		logs = ['logs/solveLogsOWA.csv']
+		if mode == "WS":
+			name = "logs/solveLogsWS2.csv"
+		else:
+			name = "logs/solveLogsOWA2.csv"
 
-		data = np.genfromtxt(logs[0], delimiter=',')[1:]
+
+		data = np.genfromtxt(name, delimiter=',')[1:]
 		
 		data[:, 0] = data[:, 0] / data[:, 6]
 		data[:, 3] = data[:, 3] / data[:, 6]
@@ -304,13 +321,11 @@ class Test:
 
 		print(np.round(meanData, 4)[:-1])
 
-	def generateQuestionsLogs(mode="OWA"):
-
-		index = 6
+	def generateQuestionsLogs(index=1, mode="OWA"):
 		
 		objectsWeights, objectsValues, W = readInstance(Test.path+".dat")
 
-		n = 5
+		n = 3
 
 		if mode == "WS":
 			name = f"logs/questionsLogsWS_{index}.csv"
@@ -343,23 +358,34 @@ class Test:
 
 		csvFile.close()
 
-	def loadQuestionsLogs(index=1, mode="OWA"):
+	def loadQuestionsLogs(start, end, mode="OWA"):
 
-		if mode == "WS":
-			name = f'logs/questionsLogsWS_{index}.csv'
-		else:
-			name = f'logs/questionsLogsOWA_{index}.csv'
+		allArray = []
+
+		for i in range(start, end+1):
+
+			if mode == "WS":
+				name = f'logs/questionsLogsWS_{i}.csv'
+			else:
+				name = f'logs/questionsLogsOWA_{i}.csv'
 		
+			data = np.genfromtxt(name, delimiter=',')[1:]
 
-		data = np.genfromtxt(name, delimiter=',')[1:]
+			allArray.append(data)
 		
 		fig, ax = plt.subplots(1)
 
-		print(data)
+		if mode == "WS":
+			plt.title("Pour WS")
+		elif mode == "Choquet":
+			plt.title("Pour Choquet")
+		else:
+			plt.title("Pour OWA")
 
-		ax.plot(data[:, 0], data[:, 1])
 
-		ax.legend(loc='lower right')
+		for data in allArray:
+			ax.plot(data[:, 0], data[:, 1])
+
 		ax.set_xlabel('Questions')
 		ax.set_ylabel('Valeur PMR')
 		ax.grid()
@@ -371,3 +397,19 @@ class Test:
 		#meanData = data.mean(axis=0)
 
 		#print(np.round(meanData, 4)[:-1])
+
+
+"""
+
+{1, 2, 3}
+
+[  1,   2,   3,  12,  13,  23, 123]
+[0.3, 0.3, 0.3, 0.6, 0.6, 0.6, 1]
+
+
+12 -> (1 + 2)
+
+123 -> (12, 13, 23)
+
+
+"""

@@ -6,16 +6,24 @@ from test import Test
 #Test.incrementalElicitation()
 #Test.simulatedRandomIncrementalElicitation(mode="OWA")
 #Test.simulatedRandomIncrementalElicitation(mode="WS")
-Test.simulatedRandomIncrementalElicitation(mode="Choquet")
 
 #Test.PLSwithElicitation(mode="OWA")
 #Test.PLSwithElicitation(mode="WS")
 
 #Test.compare()
 
-#Test.generateLogs(mode="WS")
-#Test.loadLogs()
+### Génère les logs de comparaison
+#Test.generateLogs(10, mode="OWA")
+#Test.generateLogs(5, mode="WS")
 
+### Affiche les logs des deux procédures
+#Test.loadLogs(mode="OWA")
+Test.loadLogs(mode="WS")
 
-#Test.generateQuestionsLogs()
-#Test.loadQuestionsLogs()
+###Generate logs de questions
+
+#Obselete ne pas utiliser
+#Test.generateQuestionsLogs(1, "OWA")
+
+### Affiche les graphes de nombre de questions pour les valeurs PMR
+#Test.loadQuestionsLogs(0, 9, "WS")
