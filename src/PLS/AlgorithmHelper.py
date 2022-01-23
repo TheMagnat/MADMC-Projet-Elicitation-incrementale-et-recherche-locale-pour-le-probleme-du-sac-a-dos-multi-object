@@ -63,9 +63,10 @@ def reduceObjects(objectsWeights, objectsValues, W, nbCriteria=None, factor=0.5,
 	rng = np.random.default_rng()
 	choices = rng.choice(objectsWeights.shape[0], size=newSize, replace=False)
 
+	criteriaChoices = rng.choice(objectsValues.shape[1], size=nbCriteria, replace=False)
 
 	newObjectsWeights = objectsWeights[choices]
-	newObjectsValues = objectsValues[choices, :nbCriteria]
+	newObjectsValues = objectsValues[choices][:, criteriaChoices]
 
 	newW = W * factor
 	if generateW:

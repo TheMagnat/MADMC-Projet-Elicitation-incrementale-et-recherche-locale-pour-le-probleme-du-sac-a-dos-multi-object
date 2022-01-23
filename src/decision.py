@@ -6,12 +6,12 @@ from scipy import optimize
 from pulp import LpMaximize, LpProblem, lpSum, LpVariable
 from tqdm import tqdm
 
-from aggregation import OWA
+from aggregation import OWA, weightedSum
 
 #Avec pulp
 def PMR_OWA(x, y, prefs):
 	"""
-	Find the weights for OWA with x predered from y
+	Find the worst weights for OWA that maximize OWA(y) - OWA(x)
 
 	Si positif:
 		x possiblement préféré à y
@@ -26,11 +26,11 @@ def PMR_OWA(x, y, prefs):
 	#Number of variables
 	n = x.shape[0]
 
-	x.sort()
-	y.sort()
+	sortedX = np.sort(x)
+	sortedY = np.sort(y)
 
 
-	model = LpProblem(name="OWA", sense=LpMaximize)
+	model = LpProblem(name="PMR_OWA", sense=LpMaximize)
 
 	w = [LpVariable(name=f'w_{i}', lowBound=0) for i in range(n)]
 
@@ -51,7 +51,7 @@ def PMR_OWA(x, y, prefs):
 		model += (lpSum([w[i] * sA[i] for i in range(n)]) >= lpSum([w[i] * sB[i] for i in range(n)]))
 
 	#Objective
-	model += lpSum([w[i] * y[i] for i in range(n)]) - lpSum([w[i] * x[i] for i in range(n)])
+	model += lpSum([w[i] * sortedY[i] for i in range(n)]) - lpSum([w[i] * sortedX[i] for i in range(n)])
 
 
 	model.solve()
@@ -123,7 +123,47 @@ def PMR_OWA_Scipy(x, y, prefs):
 	return -round(res.fun, 5), res.success
 
 
-def MR(x, front, prefs):
+#Avec pulp
+def PMR_WS(x, y, prefs):
+	"""
+	Find the worst weights for OWA that maximize WS(y) - WS(x)
+
+	Si positif:
+		x possiblement préféré à y
+
+	Si nul:
+		x est possiblement autant préféré que y
+
+	Si négatif:
+		x est tout le temps préféré à y
+	"""
+
+	#Number of variables
+	n = x.shape[0]
+
+
+	model = LpProblem(name="PMR_OWA", sense=LpMaximize)
+
+	w = [LpVariable(name=f'w_{i}', lowBound=0) for i in range(n)]
+
+
+	model += (lpSum(w) == 1,  "constraint_3")
+
+
+	#const4
+	for a, b in prefs:
+		model += (lpSum([w[i] * a[i] for i in range(n)]) >= lpSum([w[i] * b[i] for i in range(n)]))
+
+	#Objective
+	model += lpSum([w[i] * y[i] for i in range(n)]) - lpSum([w[i] * x[i] for i in range(n)])
+
+
+	model.solve()
+
+	return model.objective.value(), model.status == 1
+
+
+def MR(x, front, prefs, mode="OWA"):
 	"""
 	The Max Regret
 	
@@ -133,6 +173,12 @@ def MR(x, front, prefs):
 		y index and PMR(x, y, prefs)
 
 	"""
+
+	if mode == "WS":
+		PMR_func = PMR_WS
+	else:
+		PMR_func = PMR_OWA
+
 
 	nbSolutions = front.shape[0]
 
@@ -144,7 +190,7 @@ def MR(x, front, prefs):
 		if yIndex == x:
 			continue
 
-		value, success = PMR_OWA(front[x], front[yIndex], prefs)
+		value, success = PMR_func(front[x], front[yIndex], prefs)
 		if not success:
 			continue
 
@@ -156,7 +202,7 @@ def MR(x, front, prefs):
 	return maxIndex, maxValue
 
 
-def MMR(front, prefs):
+def MMR(front, prefs, mode="OWA", verbose=0):
 	"""
 	The Minimax Regret
 	
@@ -173,9 +219,9 @@ def MMR(front, prefs):
 	minXindex = -1
 	minYindex = -1
 
-	for xIndex in tqdm(range(nbSolutions)):
+	for xIndex in tqdm(range(nbSolutions), disable=(verbose == 0)):
 
-		yIndex, yValue = MR(xIndex, front, prefs)
+		yIndex, yValue = MR(xIndex, front, prefs, mode)
 
 		#May be useless
 		if yIndex == -1:
@@ -189,13 +235,13 @@ def MMR(front, prefs):
 	return minXindex, minYindex, minValue
 
 
-def WMMR(front, pair, prefs):
+def WMMR(front, pair, prefs, mode="OWA"):
 	"""
 	To heavy to be used.
 	"""
 
-	x1, y1, minValue1 = MMR(front, prefs + [(pair[0], pair[1])])
-	x2, y2, minValue2 = MMR(front, prefs + [(pair[1], pair[0])])
+	x1, y1, minValue1 = MMR(front, prefs + [(pair[0], pair[1])], mode)
+	x2, y2, minValue2 = MMR(front, prefs + [(pair[1], pair[0])], mode)
 
 	if minValue1 > minValue2:
 		return x1, y1, minValue1
@@ -203,11 +249,11 @@ def WMMR(front, pair, prefs):
 		return x2, y2, minValue2
 
 
-def CSS(front, prefs):
+def CSS(front, prefs, mode="OWA", verbose=0):
 	"""
 	Heuristic "Current Solution Strategy"
 	"""
-	x, y, value = MMR(front, prefs)
+	x, y, value = MMR(front, prefs, mode, verbose)
 
 	return x, y, round(value, 2)
 
@@ -224,22 +270,25 @@ def incrementalElicitation(front, verbose=0):
 
 	prefs = []
 
+	if front.shape[0] == 1:
+		return 0, 0, prefs
+
 	oldSelected = None
 
 	questionCount = 0
 
 	while True:
 
-		x, y, value = CSS(front, prefs)
+		x, y, value = CSS(front, prefs, verbose=1)
 
 		if verbose > 0:
 			print(f"Valeur du regret minimax: {value}")
 
-		if value == 0:
-			return x, questionCount
+		if value <= 0:
+			return x, questionCount, prefs
 
 		elif x == -1 or y == -1:
-			return oldSelected, questionCount
+			return oldSelected, questionCount, prefs
 
 		solutions = [front[x], front[y]]
 
@@ -292,20 +341,26 @@ Select 0 or 1: 0
 
 """
 
-def simulatedRandomIncrementalElicitation(front, verbose=0):
+def simulatedRandomIncrementalElicitation(front, mode="OWA", verbose=0):
 
 	unknownWeights = np.random.random(front.shape[1])
-	unknownWeights = unknownWeights/unknownWeights.sum()
+	unknownWeights = np.sort(unknownWeights/unknownWeights.sum())[::-1]
 
-	return *simulatedIncrementalElicitation(front, unknownWeights, verbose), unknownWeights
+	return *simulatedIncrementalElicitation(front, unknownWeights, mode=mode, verbose=verbose), unknownWeights
 
 
-def simulatedIncrementalElicitation(front, unknownWeights, verbose=0):
+def simulatedIncrementalElicitation(front, unknownWeights, prefs=None, mode="OWA", verbose=0, save=None):
+
+	if prefs is None:
+		prefs = []
 
 	if front.shape[0] == 1:
-		return 0, 0
+		return 0, 0, prefs
 
-	prefs = []
+	if mode == "WS":
+		aggregator = weightedSum
+	else:
+		aggregator = OWA
 
 	oldSelected = None
 
@@ -313,27 +368,32 @@ def simulatedIncrementalElicitation(front, unknownWeights, verbose=0):
 
 	while True:
 
-		x, y, value = CSS(front, prefs)
+		x, y, value = CSS(front, prefs, mode, verbose)
 
-		if verbose > 0:
+		if save is not None:
+			save.append([questionCount, value])
+
+		if verbose > 1:
 			print(f"Valeur du regret minimax: {value}")
 
 		if value <= 0:
-			return x, questionCount
+			return x, questionCount, prefs
 
 		elif x == -1 or y == -1:
-			return oldSelected, questionCount
+			return oldSelected, questionCount, prefs
 
 		solutions = [front[x], front[y]]
 
-		print(f"0: {solutions[0]} (Solution n°{x})")
-		print(f"1: {solutions[1]} (Solution n°{y})")
+		if verbose > 0:
+			print(f"0: {solutions[0]} (Solution n°{x})")
+			print(f"1: {solutions[1]} (Solution n°{y})")
 
-		selected = np.array([OWA(solutions[0], unknownWeights), OWA(solutions[1], unknownWeights)]).argmax()
+		selected = np.array([aggregator(solutions[0], unknownWeights), aggregator(solutions[1], unknownWeights)]).argmax()
 		
 		oldSelected = x * (1 - selected) + y * selected
 
-		print(f"{selected} selected (Solution n°{oldSelected}).")
+		if verbose > 0:
+			print(f"{selected} selected (Solution n°{oldSelected}).")
 
 		questionCount += 1
 
@@ -341,6 +401,3 @@ def simulatedIncrementalElicitation(front, unknownWeights, verbose=0):
 
 		#Tout les ensemble de poids tel que f(rez[selected]) > f(rez[notSelected])
 		prefs.append( (solutions[selected], solutions[notSelected]) )
-
-
-

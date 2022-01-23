@@ -1,4 +1,5 @@
 
+import numpy as np
 
 def weightedSum(objectives, weights):
 	'''
@@ -9,6 +10,4 @@ def weightedSum(objectives, weights):
 
 def OWA(objectives, weights):
 
-	objectives.sort()
-
-	return (objectives * weights).sum()
+	return (np.sort(objectives) * weights).sum()

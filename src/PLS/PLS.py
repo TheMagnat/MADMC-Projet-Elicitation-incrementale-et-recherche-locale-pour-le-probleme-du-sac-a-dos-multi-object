@@ -102,21 +102,22 @@ class PLS:
 
 		return efficaces, time.time() - startTime
 
-	def runSelection(self, selector, selectorArgs=[], verbose=0):
+	def runSelection(self, selector, selectorArgs=[], mode="OWA", verbose=0):
 
 		startTime = time.time()
 
+		prefs = []
 
 		initialPopulation = self.populationGenerator(self.objectsWeights, self.objectsValues, self.W)
 
 		tempoFront = convertPopulationToFront(initialPopulation, self.nbCriteria)
 
-		currentSolutionIndex = selector(tempoFront, *selectorArgs)[0]
+		currentSolutionIndex, questionCount, prefs = selector(tempoFront, *selectorArgs, mode=mode, verbose=0)
 		currentSolution = initialPopulation[currentSolutionIndex]
 
 		it = 0
 
-		totalSelectorIt = 0
+		totalSelectorIt = questionCount
 
 		while True:
 
@@ -128,9 +129,9 @@ class PLS:
 
 			tempoFront = convertPopulationToFront(currentPopulation, self.nbCriteria)
 
-			currentSolutionIndex, nbSelectorIt = selector(tempoFront, *selectorArgs)
+			currentSolutionIndex, questionCount, prefs = selector(tempoFront, *selectorArgs, mode=mode, prefs=prefs, verbose=verbose)
 
-			totalSelectorIt += nbSelectorIt
+			totalSelectorIt += questionCount
 
 			if verbose == 1:
 				print(f"Selected solution n°{currentSolutionIndex}: {currentPopulation[currentSolutionIndex][1]}")
@@ -139,7 +140,7 @@ class PLS:
 			if currentSolutionIndex == 0:
 
 				if verbose == 1:
-					print(f"Solution séléctionné en {it} itérations.")
+					print(f"Solution séléctionné en {it+1} itérations.")
 
 				return currentSolution, time.time() - startTime, totalSelectorIt
 
