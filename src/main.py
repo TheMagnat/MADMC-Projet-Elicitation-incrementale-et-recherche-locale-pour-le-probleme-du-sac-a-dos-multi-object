@@ -6,6 +6,7 @@ from test import Test
 #Test.incrementalElicitation()
 #Test.simulatedRandomIncrementalElicitation(mode="OWA")
 #Test.simulatedRandomIncrementalElicitation(mode="WS")
+Test.simulatedRandomIncrementalElicitation(mode="Choquet")
 
 #Test.PLSwithElicitation(mode="OWA")
 #Test.PLSwithElicitation(mode="WS")
@@ -17,4 +18,4 @@ from test import Test
 
 
 #Test.generateQuestionsLogs()
-Test.loadQuestionsLogs()
+#Test.loadQuestionsLogs()
