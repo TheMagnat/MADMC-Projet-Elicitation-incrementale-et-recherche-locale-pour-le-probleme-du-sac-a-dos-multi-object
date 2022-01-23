@@ -122,11 +122,49 @@ def PMR_OWA_Scipy(x, y, prefs):
 
 	return -round(res.fun, 5), res.success
 
-#choquet
+
+#Avec pulp
+def PMR_WS(x, y, prefs):
+	"""
+	Find the worst weights for OWA that maximize WS(y) - WS(x)
+
+	Si positif:
+		x possiblement préféré à y
+
+	Si nul:
+		x est possiblement autant préféré que y
+
+	Si négatif:
+		x est tout le temps préféré à y
+	"""
+
+	#Number of variables
+	n = x.shape[0]
+
+
+	model = LpProblem(name="PMR_OWA", sense=LpMaximize)
+
+	w = [LpVariable(name=f'w_{i}', lowBound=0) for i in range(n)]
+
+
+	model += (lpSum(w) == 1,  "constraint_3")
+
+
+	#const4
+	for a, b in prefs:
+		model += (lpSum([w[i] * a[i] for i in range(n)]) >= lpSum([w[i] * b[i] for i in range(n)]))
+
+	#Objective
+	model += lpSum([w[i] * y[i] for i in range(n)]) - lpSum([w[i] * x[i] for i in range(n)])
+
+
+	model.solve()
+
+	return model.objective.value(), model.status == 1
+
+### Code inachevé, merci d'ignorer
 def PMR_Choquet(x, y, prefs):
 	"""
-	Find the weights for OWA with x predered from y
-
 	Si positif:
 		x possiblement préféré à y
 
@@ -196,45 +234,6 @@ def PMR_Choquet(x, y, prefs):
 	y.sort()
 	sumY=[v[strListY[-1]]*y[0]]+[v[strListY[-i-1]]*(y[i]-y[i-1]) for i in range(1,len(strListY))]
 	model += lpSum([sumY]) - lpSum([sumX])
-
-	model.solve()
-
-	return model.objective.value(), model.status == 1
-
-#Avec pulp
-def PMR_WS(x, y, prefs):
-	"""
-	Find the worst weights for OWA that maximize WS(y) - WS(x)
-
-	Si positif:
-		x possiblement préféré à y
-
-	Si nul:
-		x est possiblement autant préféré que y
-
-	Si négatif:
-		x est tout le temps préféré à y
-	"""
-
-	#Number of variables
-	n = x.shape[0]
-
-
-	model = LpProblem(name="PMR_OWA", sense=LpMaximize)
-
-	w = [LpVariable(name=f'w_{i}', lowBound=0) for i in range(n)]
-
-
-	model += (lpSum(w) == 1,  "constraint_3")
-
-
-	#const4
-	for a, b in prefs:
-		model += (lpSum([w[i] * a[i] for i in range(n)]) >= lpSum([w[i] * b[i] for i in range(n)]))
-
-	#Objective
-	model += lpSum([w[i] * y[i] for i in range(n)]) - lpSum([w[i] * x[i] for i in range(n)])
-
 
 	model.solve()
 
