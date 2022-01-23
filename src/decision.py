@@ -25,7 +25,6 @@ def PMR_OWA(x, y, prefs):
 
 	#Number of variables
 	n = x.shape[0]
-
 	x.sort()
 	y.sort()
 
@@ -112,8 +111,8 @@ def PMR_OWA_Scipy(x, y, prefs):
 
 
 	res = optimize.linprog(
-	    c = -c, 
-	    A_ub = A, 
+	    c = -c,
+	    A_ub = A,
 	    b_ub = b,
 
 	    A_eq=A_eq,
@@ -122,11 +121,89 @@ def PMR_OWA_Scipy(x, y, prefs):
 
 	return -round(res.fun, 5), res.success
 
+#choquet
+def PMR_Choquet(x, y, prefs):
+	"""
+	Find the weights for OWA with x predered from y
+
+	Si positif:
+		x possiblement préféré à y
+
+	Si nul:
+		x est possiblement autant préféré que y
+
+	Si négatif:
+		x est tout le temps préféré à y
+	"""
+
+	#Number of variables
+	n = x.shape[0]
+	xcopy=x.copy()
+	xcopy[::-1].sort()
+	listX=[np.where(x==xcopy[0])[0]]
+	ycopy=y.copy()
+	ycopy[::-1].sort()
+	listY=[np.where(y==ycopy[0])[0]]
+
+	for i in range(1,len(x)-1):
+
+		listX=listX+[np.concatenate((listX[i-1],np.where(x==xcopy[i] )[0]))]
+
+		listY=listY+[np.concatenate((listY[i-1],np.where(y==ycopy[i] )[0]))]
+	strListX=[]
+	strListY=[]
+
+	for i in range(0,len(x)-1):
+		strListX +=[str(np.sort(listX[i]))]
+		strListY +=[str(np.sort(listY[i]))]
+	v=dict()
+	l=dict()
+	u=dict()
+	allSets=np.union1d(strListX,strListY)
+	for i in range(len(allSets)):
+		v[allSets[i]]=LpVariable(name=f'v_{allSets[i]}', lowBound=0,upBound=1)
+		l[allSets[i]]=LpVariable(name=f'u_{allSets[i]}', lowBound=0,upBound=1)
+		u[allSets[i]]=LpVariable(name=f'l_{allSets[i]}', lowBound=0,upBound=1)
+	model = LpProblem(name="Choquet", sense=LpMaximize)
+	for i in range(n-2):
+		#contrainte 10/11
+		model += (v[strListX[i]]<=v[strListX[i+1]], f"constraint_10(v {strListX[i]} and {strListX[i+1]}")
+		model += (v[strListY[i]]<=v[strListY[i+1]], f"constraint_11(v {strListY[i]} and {strListY[i+1]}")
+
+	for i in range(n-1):
+		#contrainte 14/15
+		model += (v[strListX[i]]<=l[strListX[i]], f"constraint_14(v {strListX[i]} and l {strListX[i]}")
+		model += (u[strListX[i]]<=v[strListX[i]], f"constraint_14(u {strListX[i]} and v {strListX[i]}")
+		model += (v[strListY[i]]<=l[strListY[i]], f"constraint_15(v {strListY[i]} and l {strListY[i]}")
+		model += (u[strListY[i]]<=v[strListY[i]], f"constraint_15(u {strListY[i]} and v {strListY[i]}")
+	for i in range(len(listX)):
+		for j in range(len(listY)):
+			if(len(listX[i])<len(listY[j])):
+				if( all(a in listX[i] for a in listY[j]) ):
+					#contrainte 12
+					model += (v[strListX[i]]<=v[strListY[j]], f"constraint_12(v {i} and v{j}")
+
+			if(len(listY[j])<len(listX[i])):
+				if(all(a in listY[j] for a in listX[i]) ):
+					#contrainte 13
+					model += (v[strListY[j]]<=v[strListX[i]], f"constraint_13(v {j} and v{i}")
+
+
+	#Objective
+	x.sort()
+	sumX=[v[strListX[-1]]*x[0]]+[v[strListX[-i-1]]*(x[i]-x[i-1]) for i in range(1,len(strListX))]
+	y.sort()
+	sumY=[v[strListY[-1]]*y[0]]+[v[strListY[-i-1]]*(y[i]-y[i-1]) for i in range(1,len(strListY))]
+	model += lpSum([sumY]) - lpSum([sumX])
+
+	model.solve()
+
+	return model.objective.value(), model.status == 1
 
 def MR(x, front, prefs):
 	"""
 	The Max Regret
-	
+
 	MMR(x, front, prefs) = max_y PMR(x, y, prefs)
 
 	return:
@@ -144,7 +221,7 @@ def MR(x, front, prefs):
 		if yIndex == x:
 			continue
 
-		value, success = PMR_OWA(front[x], front[yIndex], prefs)
+		value, success = PMR_Choquet(front[x], front[yIndex], prefs)
 		if not success:
 			continue
 
@@ -159,9 +236,9 @@ def MR(x, front, prefs):
 def MMR(front, prefs):
 	"""
 	The Minimax Regret
-	
+
 	MMR(front, prefs) = min_x MR(x, front, prefs)
-	
+
 	return:
 		x index, y index (wich maximise the PMR) and PMR(x, y, prefs)
 
@@ -330,7 +407,7 @@ def simulatedIncrementalElicitation(front, unknownWeights, verbose=0):
 		print(f"1: {solutions[1]} (Solution n°{y})")
 
 		selected = np.array([OWA(solutions[0], unknownWeights), OWA(solutions[1], unknownWeights)]).argmax()
-		
+
 		oldSelected = x * (1 - selected) + y * selected
 
 		print(f"{selected} selected (Solution n°{oldSelected}).")
@@ -341,6 +418,3 @@ def simulatedIncrementalElicitation(front, unknownWeights, verbose=0):
 
 		#Tout les ensemble de poids tel que f(rez[selected]) > f(rez[notSelected])
 		prefs.append( (solutions[selected], solutions[notSelected]) )
-
-
-
